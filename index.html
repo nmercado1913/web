@@ -2,223 +2,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Theatre Booking System</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #111;
-      color: white;
-    }
+<meta charset="UTF-8">
+<title>Theatre Booking</title>
 
-    .screen {
-      background: #fff;
-      height: 50px;
-      width: 300px;
-      margin: 20px auto;
-      border-radius: 5px;
-      color: black;
-      line-height: 50px;
-      font-weight: bold;
-    }
+<style>
+body {
+  background:#111;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
 
-    .container {
-      display: grid;
-      grid-template-columns: repeat(8, 50px);
-      gap: 10px;
-      justify-content: center;
-      margin: 20px;
-    }
+.screen {
+  background:white;
+  color:black;
+  width:300px;
+  margin:20px auto;
+  padding:10px;
+  border-radius:5px;
+  font-weight:bold;
+}
 
-    .seat {
-      width: 50px;
-      height: 50px;
-      background: #444;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+.container {
+  display:grid;
+  grid-template-columns:repeat(8,50px);
+  gap:8px;
+  justify-content:center;
+  margin:20px;
+}
 
-    .seat.selected {
-      background: #6feaf6;
-    }
+.seat {
+  width:50px;
+  height:50px;
+  background:#444;
+  border-radius:5px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  cursor:pointer;
+}
 
-    .seat.occupied {
-      background: #ff4d4d;
-      cursor: not-allowed;
-    }
+.selected { background:#6feaf6; }
+.occupied { background:#ff4d4d; cursor:not-allowed; }
 
-    .controls {
-      margin: 15px;
-    }
+.controls { margin:15px; }
 
-    button {
-      padding: 10px 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
+button {
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+}
 
-    .checkout {
-      background: #28a745;
-      color: white;
-    }
-
-    .clear {
-      background: #dc3545;
-      color: white;
-    }
-  </style>
+.clear { background:red; color:white; }
+.checkout { background:green; color:white; }
+</style>
 </head>
+
 <body>
 
-  <h1>Theatre Booking</h1>
+<h1>Theatre Booking</h1>
 
-  <div class="screen">SCREEN</div>
+<div class="screen">SCREEN</div>
 
-  <div class="controls">
-    <label>
-      Ticket Type:
-      <select id="ticketType">
-        <option value="adult">Adult</option>
-        <option value="child">Child</option>
-      </select>
-    </label>
-  </div>
+<div class="controls">
+  Ticket Type:
+  <select id="ticketType">
+    <option value="child">Child</option>
+    <option value="adult">Adult</option>
+  </select>
+</div>
 
-  <div class="container" id="seats"></div>
+<div id="seats" class="container"></div>
 
-  <div>
-    <p>Selected Seats: <span id="count">0</span></p>
-    <p>Total Price: $<span id="total">0</span></p>
-  </div>
+<p>Seats Selected: <span id="count">0</span></p>
+<p>Total Price: $<span id="total">0</span></p>
 
-  <div class="controls">
-    <button class="clear" id="clearBtn">Deselect All</button>
-    <button class="checkout" id="checkoutBtn">Proceed to Checkout</button>
-  </div>
+<div class="controls">
+  <button id="clearBtn" class="clear">Deselect All</button>
+  <button id="checkoutBtn" class="checkout">Proceed to Checkout</button>
+</div>
 
-  <script>
-    const container = document.getElementById("seats");
-    const countEl = document.getElementById("count");
-    const totalEl = document.getElementById("total");
-    const ticketTypeEl = document.getElementById("ticketType");
-    const clearBtn = document.getElementById("clearBtn");
+<script>
+const rows = 5;
+const cols = 8;
 
-    const rows = 5;
-    const cols = 8;
+const basePrices = [10, 12, 15, 18, 20]; // back → front
 
-    // Base prices by row
-    const basePrices = [20, 20, 15, 15, 10];
+let selectedSeats = JSON.parse(localStorage.getItem("selectedSeats")) || [];
+let ticketType = localStorage.getItem("ticketType") || "child";
 
-    // Load saved
-    let selectedSeats = JSON.parse(localStorage.getItem("selectedSeats")) || [];
-    let occupiedSeats = JSON.parse(localStorage.getItem("occupiedSeats")) || [5, 12];
-    let ticketType = localStorage.getItem("ticketType") || "adult";
+const container = document.getElementById("seats");
+const totalEl = document.getElementById("total");
+const countEl = document.getElementById("count");
+const ticketTypeEl = document.getElementById("ticketType");
 
-    ticketTypeEl.value = ticketType;
+ticketTypeEl.value = ticketType;
 
-    function getSeatLabel(row, col) {
-      return String.fromCharCode(65 + row) + (col + 1); // A1, B3...
-    }
+// Create seat label like A1, B3, etc.
+function getLabel(row, col){
+  return String.fromCharCode(65 + row) + (col + 1);
+}
 
-    function getPrice(row) {
-      let price = basePrices[row];
-      if (ticketType === "adult") price += 5; // adults pay more
-      return price;
-    }
+// Price logic
+function getPrice(row){
+  let price = basePrices[row];
+  if(ticketType === "adult"){
+    price += 5; // adult pays more
+  }
+  return price;
+}
 
-    function createSeats() {
-      container.innerHTML = "";
+function drawSeats(){
+  container.innerHTML = "";
 
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const seatIndex = r * cols + c;
-          const seat = document.createElement("div");
-          seat.classList.add("seat");
+  for(let r=0; r<rows; r++){
+    for(let c=0; c<cols; c++){
 
-          const label = getSeatLabel(r, c);
-          seat.innerText = label;
+      const index = r * cols + c;
+      const seat = document.createElement("div");
 
-          if (occupiedSeats.includes(seatIndex)) {
-            seat.classList.add("occupied");
-          }
+      seat.classList.add("seat");
+      seat.innerText = getLabel(r,c); // ✅ LABELS HERE
 
-          if (selectedSeats.includes(seatIndex)) {
-            seat.classList.add("selected");
-          }
-
-          seat.dataset.index = seatIndex;
-          seat.dataset.row = r;
-
-          seat.addEventListener("click", () => {
-            if (seat.classList.contains("occupied")) return;
-
-            seat.classList.toggle("selected");
-
-            const index = parseInt(seat.dataset.index);
-
-            if (selectedSeats.includes(index)) {
-              selectedSeats = selectedSeats.filter(s => s !== index);
-            } else {
-              selectedSeats.push(index);
-            }
-
-            updateTotal();
-            saveData();
-          });
-
-          container.appendChild(seat);
-        }
+      if(selectedSeats.includes(index)){
+        seat.classList.add("selected");
       }
-    }
 
-    function updateTotal() {
-      let total = 0;
+      seat.addEventListener("click", ()=>{
+        seat.classList.toggle("selected");
 
-      document.querySelectorAll(".seat.selected").forEach(seat => {
-        const row = parseInt(seat.dataset.row);
-        total += getPrice(row);
+        if(selectedSeats.includes(index)){
+          selectedSeats = selectedSeats.filter(s => s !== index);
+        } else {
+          selectedSeats.push(index);
+        }
+
+        save();
+        updateTotal();
       });
 
-      countEl.innerText = selectedSeats.length;
-      totalEl.innerText = total;
+      seat.dataset.row = r;
+      container.appendChild(seat);
     }
+  }
+}
 
-    function saveData() {
-      localStorage.setItem("selectedSeats", JSON.stringify(selectedSeats));
-      localStorage.setItem("occupiedSeats", JSON.stringify(occupiedSeats));
-      localStorage.setItem("ticketType", ticketType);
-    }
+function updateTotal(){
+  let total = 0;
 
-    // Ticket type change
-    ticketTypeEl.addEventListener("change", (e) => {
-      ticketType = e.target.value;
-      updateTotal();
-      saveData();
-    });
+  document.querySelectorAll(".seat.selected").forEach(seat=>{
+    total += getPrice(parseInt(seat.dataset.row));
+  });
 
-    // Clear selection
-    clearBtn.addEventListener("click", () => {
-      selectedSeats = [];
-      saveData();
-      createSeats();
-      updateTotal();
-    });
+  countEl.innerText = selectedSeats.length;
+  totalEl.innerText = total;
+}
 
-    // Checkout button
-    document.getElementById("checkoutBtn").addEventListener("click", () => {
-      alert("Proceeding to checkout with " + selectedSeats.length + " seats.");
-    });
+function save(){
+  localStorage.setItem("selectedSeats", JSON.stringify(selectedSeats));
+  localStorage.setItem("ticketType", ticketType);
+}
 
-    createSeats();
-    updateTotal();
-  </script>
+// CHANGE TICKET TYPE
+ticketTypeEl.addEventListener("change", (e)=>{
+  ticketType = e.target.value;
+  save();
+  updateTotal();
+});
+
+// ✅ DESELECT BUTTON
+document.getElementById("clearBtn").addEventListener("click", ()=>{
+  selectedSeats = [];
+  save();
+  drawSeats();
+  updateTotal();
+});
+
+// ✅ CHECKOUT BUTTON
+document.getElementById("checkoutBtn").addEventListener("click", ()=>{
+  alert("Checkout: " + selectedSeats.length + " seats | Total $" + totalEl.innerText);
+});
+
+drawSeats();
+updateTotal();
+</script>
 
 </body>
 </html>
