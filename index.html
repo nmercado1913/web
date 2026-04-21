@@ -2,20 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Theatre Seat Booking</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Theatre Booking System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: white;
+    }
+
+    .screen {
+      background: #fff;
+      height: 50px;
+      width: 300px;
+      margin: 20px auto;
+      border-radius: 5px;
+      color: black;
+      line-height: 50px;
+      font-weight: bold;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      gap: 10px;
+      justify-content: center;
+      margin: 20px;
+    }
+
+    .seat {
+      width: 40px;
+      height: 40px;
+      background: #444;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .seat.selected {
+      background: #6feaf6;
+    }
+
+    .seat.occupied {
+      background: #ff4d4d;
+      cursor: not-allowed;
+    }
+
+    .legend {
+      margin: 15px;
+    }
+
+    .legend span {
+      margin: 0 10px;
+    }
+
+    .price-info {
+      margin-top: 15px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Theatre Seat Booking</h1>
+  <h1>Theatre Booking</h1>
 
-<div class="screen">SCREEN</div>
+  <div class="screen">SCREEN</div>
 
-<div class="container" id="seating"></div>
+  <div class="container" id="seats"></div>
 
-<p>You selected <span id="count">0</span> seats</p>
-<p>Total: $<span id="total">0</span></p>
+  <div class="legend">
+    <span>⬜ Available</span>
+    <span style="color:#6feaf6;">⬜ Selected</span>
+    <span style="color:#ff4d4d;">⬜ Occupied</span>
+  </div>
 
-<script src="script.js"></script>
+  <div class="price-info">
+    <p>Selected Seats: <span id="count">0</span></p>
+    <p>Total Price: $<span id="total">0</span></p>
+  </div>
+
+  <script>
+    const container = document.getElementById("seats");
+    const countEl = document.getElementById("count");
+    const totalEl = document.getElementById("total");
+
+    const rows = 5;
+    const cols = 8;
+
+    // Pricing by row
+    const prices = [20, 20, 15, 15, 10];
+
+    // Load saved data
+    let selectedSeats = JSON.parse(localStorage.getItem("selectedSeats")) || [];
+    let occupiedSeats = JSON.parse(localStorage.getItem("occupiedSeats")) || [5, 12];
+
+    function createSeats() {
+      container.innerHTML = "";
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const seatIndex = r * cols + c;
+          const seat = document.createElement("div");
+          seat.classList.add("seat");
+
+          if (occupiedSeats.includes(seatIndex)) {
+            seat.classList.add("occupied");
+          }
+
+          if (selectedSeats.includes(seatIndex)) {
+            seat.classList.add("selected");
+          }
+
+          seat.dataset.index = seatIndex;
+          seat.dataset.price = prices[r];
+
+          seat.addEventListener("click", () => {
+            if (seat.classList.contains("occupied")) return;
+
+            seat.classList.toggle("selected");
+
+            const index = parseInt(seat.dataset.index);
+
+            if (selectedSeats.includes(index)) {
+              selectedSeats = selectedSeats.filter(s => s !== index);
+            } else {
+              selectedSeats.push(index);
+            }
+
+            updateTotal();
+            saveData();
+          });
+
+          container.appendChild(seat);
+        }
+      }
+    }
+
+    function updateTotal() {
+      let total = 0;
+
+      document.querySelectorAll(".seat.selected").forEach(seat => {
+        total += parseInt(seat.dataset.price);
+      });
+
+      countEl.innerText = selectedSeats.length;
+      totalEl.innerText = total;
+    }
+
+    function saveData() {
+      localStorage.setItem("selectedSeats", JSON.stringify(selectedSeats));
+      localStorage.setItem("occupiedSeats", JSON.stringify(occupiedSeats));
+    }
+
+    createSeats();
+    updateTotal();
+  </script>
+
 </body>
 </html>
