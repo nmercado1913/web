@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,18 +25,22 @@
 
     .container {
       display: grid;
-      grid-template-columns: repeat(8, 40px);
+      grid-template-columns: repeat(8, 50px);
       gap: 10px;
       justify-content: center;
       margin: 20px;
     }
 
     .seat {
-      width: 40px;
-      height: 40px;
+      width: 50px;
+      height: 50px;
       background: #444;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .seat.selected {
@@ -47,16 +52,26 @@
       cursor: not-allowed;
     }
 
-    .legend {
+    .controls {
       margin: 15px;
     }
 
-    .legend span {
-      margin: 0 10px;
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
 
-    .price-info {
-      margin-top: 15px;
+    .checkout {
+      background: #28a745;
+      color: white;
+    }
+
+    .clear {
+      background: #dc3545;
+      color: white;
     }
   </style>
 </head>
@@ -66,33 +81,57 @@
 
   <div class="screen">SCREEN</div>
 
-  <div class="container" id="seats"></div>
-
-  <div class="legend">
-    <span>⬜ Available</span>
-    <span style="color:#6feaf6;">⬜ Selected</span>
-    <span style="color:#ff4d4d;">⬜ Occupied</span>
+  <div class="controls">
+    <label>
+      Ticket Type:
+      <select id="ticketType">
+        <option value="adult">Adult</option>
+        <option value="child">Child</option>
+      </select>
+    </label>
   </div>
 
-  <div class="price-info">
+  <div class="container" id="seats"></div>
+
+  <div>
     <p>Selected Seats: <span id="count">0</span></p>
     <p>Total Price: $<span id="total">0</span></p>
+  </div>
+
+  <div class="controls">
+    <button class="clear" id="clearBtn">Deselect All</button>
+    <button class="checkout" id="checkoutBtn">Proceed to Checkout</button>
   </div>
 
   <script>
     const container = document.getElementById("seats");
     const countEl = document.getElementById("count");
     const totalEl = document.getElementById("total");
+    const ticketTypeEl = document.getElementById("ticketType");
+    const clearBtn = document.getElementById("clearBtn");
 
     const rows = 5;
     const cols = 8;
 
-    // Pricing by row
-    const prices = [20, 20, 15, 15, 10];
+    // Base prices by row
+    const basePrices = [20, 20, 15, 15, 10];
 
-    // Load saved data
+    // Load saved
     let selectedSeats = JSON.parse(localStorage.getItem("selectedSeats")) || [];
     let occupiedSeats = JSON.parse(localStorage.getItem("occupiedSeats")) || [5, 12];
+    let ticketType = localStorage.getItem("ticketType") || "adult";
+
+    ticketTypeEl.value = ticketType;
+
+    function getSeatLabel(row, col) {
+      return String.fromCharCode(65 + row) + (col + 1); // A1, B3...
+    }
+
+    function getPrice(row) {
+      let price = basePrices[row];
+      if (ticketType === "adult") price += 5; // adults pay more
+      return price;
+    }
 
     function createSeats() {
       container.innerHTML = "";
@@ -103,6 +142,9 @@
           const seat = document.createElement("div");
           seat.classList.add("seat");
 
+          const label = getSeatLabel(r, c);
+          seat.innerText = label;
+
           if (occupiedSeats.includes(seatIndex)) {
             seat.classList.add("occupied");
           }
@@ -112,7 +154,7 @@
           }
 
           seat.dataset.index = seatIndex;
-          seat.dataset.price = prices[r];
+          seat.dataset.row = r;
 
           seat.addEventListener("click", () => {
             if (seat.classList.contains("occupied")) return;
@@ -140,7 +182,8 @@
       let total = 0;
 
       document.querySelectorAll(".seat.selected").forEach(seat => {
-        total += parseInt(seat.dataset.price);
+        const row = parseInt(seat.dataset.row);
+        total += getPrice(row);
       });
 
       countEl.innerText = selectedSeats.length;
@@ -150,7 +193,28 @@
     function saveData() {
       localStorage.setItem("selectedSeats", JSON.stringify(selectedSeats));
       localStorage.setItem("occupiedSeats", JSON.stringify(occupiedSeats));
+      localStorage.setItem("ticketType", ticketType);
     }
+
+    // Ticket type change
+    ticketTypeEl.addEventListener("change", (e) => {
+      ticketType = e.target.value;
+      updateTotal();
+      saveData();
+    });
+
+    // Clear selection
+    clearBtn.addEventListener("click", () => {
+      selectedSeats = [];
+      saveData();
+      createSeats();
+      updateTotal();
+    });
+
+    // Checkout button
+    document.getElementById("checkoutBtn").addEventListener("click", () => {
+      alert("Proceeding to checkout with " + selectedSeats.length + " seats.");
+    });
 
     createSeats();
     updateTotal();
@@ -158,3 +222,4 @@
 
 </body>
 </html>
+```
