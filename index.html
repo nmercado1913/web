@@ -1,4 +1,4 @@
-```html id="seat-upgrade-v2"
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,6 +20,7 @@ body {
   margin:20px auto;
   padding:10px;
   border-radius:5px;
+  font-weight:bold;
 }
 
 .container {
@@ -42,9 +43,8 @@ body {
   cursor:pointer;
 }
 
-/* DIFFERENT COLORS */
-.selected-adult { background:#4da6ff; }   /* blue */
-.selected-child { background:#f6c85f; }   /* yellow */
+.selected { background:#6feaf6; }
+.occupied { background:#ff4d4d; cursor:not-allowed; }
 
 .controls { margin:15px; }
 
@@ -68,7 +68,7 @@ button {
 <div class="screen">SCREEN</div>
 
 <div class="controls">
-  Select Ticket Type:
+  Ticket Type:
   <select id="ticketType">
     <option value="child">Child</option>
     <option value="adult">Adult</option>
@@ -89,30 +89,32 @@ button {
 const rows = 5;
 const cols = 8;
 
-// Base price per row
-const basePrices = [10, 12, 15, 18, 20];
+const basePrices = [10, 12, 15, 18, 20]; // back → front
 
-// Now stores objects instead of numbers
 let selectedSeats = JSON.parse(localStorage.getItem("selectedSeats")) || [];
+let ticketType = localStorage.getItem("ticketType") || "child";
 
 const container = document.getElementById("seats");
 const totalEl = document.getElementById("total");
 const countEl = document.getElementById("count");
 const ticketTypeEl = document.getElementById("ticketType");
 
-// Label like A1
+ticketTypeEl.value = ticketType;
+
+// Create seat label like A1, B3, etc.
 function getLabel(row, col){
   return String.fromCharCode(65 + row) + (col + 1);
 }
 
-// Price per seat
-function getPrice(row, type){
+// Price logic
+function getPrice(row){
   let price = basePrices[row];
-  if(type === "adult") price += 5;
+  if(ticketType === "adult"){
+    price += 5; // adult pays more
+  }
   return price;
 }
 
-// Draw seats
 function drawSeats(){
   container.innerHTML = "";
 
@@ -123,33 +125,22 @@ function drawSeats(){
       const seat = document.createElement("div");
 
       seat.classList.add("seat");
-      seat.innerText = getLabel(r,c);
+      seat.innerText = getLabel(r,c); // ✅ LABELS HERE
 
-      // Check if selected
-      const found = selectedSeats.find(s => s.index === index);
-
-      if(found){
-        seat.classList.add(
-          found.type === "adult" ? "selected-adult" : "selected-child"
-        );
+      if(selectedSeats.includes(index)){
+        seat.classList.add("selected");
       }
 
       seat.addEventListener("click", ()=>{
-        const existing = selectedSeats.find(s => s.index === index);
+        seat.classList.toggle("selected");
 
-        if(existing){
-          // remove
-          selectedSeats = selectedSeats.filter(s => s.index !== index);
+        if(selectedSeats.includes(index)){
+          selectedSeats = selectedSeats.filter(s => s !== index);
         } else {
-          // add with CURRENT dropdown type
-          selectedSeats.push({
-            index: index,
-            type: ticketTypeEl.value
-          });
+          selectedSeats.push(index);
         }
 
         save();
-        drawSeats();
         updateTotal();
       });
 
@@ -159,25 +150,30 @@ function drawSeats(){
   }
 }
 
-// Update total
 function updateTotal(){
   let total = 0;
 
-  selectedSeats.forEach(seat=>{
-    const row = Math.floor(seat.index / cols);
-    total += getPrice(row, seat.type);
+  document.querySelectorAll(".seat.selected").forEach(seat=>{
+    total += getPrice(parseInt(seat.dataset.row));
   });
 
   countEl.innerText = selectedSeats.length;
   totalEl.innerText = total;
 }
 
-// Save
 function save(){
   localStorage.setItem("selectedSeats", JSON.stringify(selectedSeats));
+  localStorage.setItem("ticketType", ticketType);
 }
 
-// Clear all
+// CHANGE TICKET TYPE
+ticketTypeEl.addEventListener("change", (e)=>{
+  ticketType = e.target.value;
+  save();
+  updateTotal();
+});
+
+// ✅ DESELECT BUTTON
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   selectedSeats = [];
   save();
@@ -185,12 +181,11 @@ document.getElementById("clearBtn").addEventListener("click", ()=>{
   updateTotal();
 });
 
-// Checkout
+// ✅ CHECKOUT BUTTON
 document.getElementById("checkoutBtn").addEventListener("click", ()=>{
   alert("Checkout: " + selectedSeats.length + " seats | Total $" + totalEl.innerText);
 });
 
-// Initial load
 drawSeats();
 updateTotal();
 </script>
